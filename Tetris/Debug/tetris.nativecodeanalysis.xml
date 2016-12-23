@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DEFECTS>
+  <DEFECT>
+    <SFA>
+      <FILEPATH>c:\users\sangmin\documents\visual studio 2015\projects\tetris\tetris\</FILEPATH>
+      <FILENAME>tetris.c</FILENAME>
+      <LINE>72</LINE>
+      <COLUMN>8</COLUMN>
+    </SFA>
+    <DEFECTCODE>6031</DEFECTCODE>
+    <DESCRIPTION>반환 값이 무시되었습니다. 'getchar'.</DESCRIPTION>
+    <FUNCTION>main</FUNCTION>
+    <DECORATED>main</DECORATED>
+    <FUNCLINE>50</FUNCLINE>
+    <PATH></PATH>
+  </DEFECT>
+  <DEFECT>
+    <SFA>
+      <FILEPATH>c:\users\sangmin\documents\visual studio 2015\projects\tetris\tetris\</FILEPATH>
+      <FILENAME>tetris.c</FILENAME>
+      <LINE>112</LINE>
+      <COLUMN>7</COLUMN>
+    </SFA>
+    <DEFECTCODE>6031</DEFECTCODE>
+    <DESCRIPTION>반환 값이 무시되었습니다. '_getch'.</DESCRIPTION>
+    <FUNCTION>mainTitle</FUNCTION>
+    <DECORATED>mainTitle</DECORATED>
+    <FUNCLINE>83</FUNCLINE>
+    <PATH></PATH>
+  </DEFECT>
+</DEFECTS>
