@@ -21,7 +21,7 @@
 #define BLOCK_INITALIZATION  9 //블럭 배열 중 실제 블럭이 아닌 공간
 
 #define BLOCK_SIZE_Y 4
-#define BLOCK_SIZE_X 3
+#define BLOCK_SIZE_X 4
 
 #define LEFT 75
 #define RIGHT 77
@@ -32,7 +32,7 @@
 
 typedef struct
 {
-	int block[4][3];
+	int block[BLOCK_SIZE_Y][BLOCK_SIZE_X];
 	int xPosition;
 	int yPosition;
 	int type;
@@ -54,14 +54,16 @@ void makeMap(int[][MAIN_X], int [][MAIN_X], BLOCK * blockPointer);
 void makeBlock(BLOCK *);
 void reset(int[][MAIN_X], int[][MAIN_X], BLOCK * blockPointer);
 void dropBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X]);
-int crushBlcok(BLOCK *, int[][MAIN_X], int[][MAIN_X]);
+int crushBlcok(BLOCK *, int[][MAIN_X], int[][MAIN_X], int);
 void inputKey(BLOCK *, int[][MAIN_X], int[][MAIN_X]);
+void moveBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X], int);
 
 
 int main()
 {
 	int x = 5;
 	int y = 4;
+	int i = 0;
 	int mainOriginal[MAIN_Y][MAIN_X];
 	int mainCopy[MAIN_Y][MAIN_X];
 	BLOCK *blockPointer;
@@ -75,11 +77,13 @@ int main()
 	
 	while (1)
 	{
-		
-		inputKey(blockPointer, mainOriginal, mainCopy);
-		makeMap(mainOriginal, mainCopy, blockPointer);
-
-		Sleep(1000);
+		for (i = 0; i < 5; i++)
+		{
+			inputKey(blockPointer, mainOriginal, mainCopy);
+			makeMap(mainOriginal, mainCopy, blockPointer);
+			
+			Sleep(150);
+		}
 		
 		dropBlock(blockPointer, mainOriginal, mainCopy);
 	}
@@ -155,7 +159,6 @@ void setMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X])
 		mainOriginal[MAIN_Y - 1][i] = WALL;
 	}
 		
-	Sleep(1000);
 	system("cls");
 }
 
@@ -167,7 +170,8 @@ void makeMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPo
 	{
 		for (j = 0; j < BLOCK_SIZE_X; j++)
 		{		
-			mainOriginal[i + blockPointer->yPosition][j + blockPointer->xPosition] = blockPointer->block[i][j];
+			if(blockPointer->block[i][j] == ACTIVITY_BLOCK || blockPointer->block[i][j] == BLOCK_FIXED)
+				mainOriginal[i + blockPointer->yPosition][j + blockPointer->xPosition] = blockPointer->block[i][j];
 		}
 	}
 
@@ -214,8 +218,14 @@ void makeMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPo
 		for (j = 0; j < MAIN_X; j++)
 		{
 			mainCopy[i][j] = mainOriginal[i][j];
+
+			if (mainOriginal[i][j] == ACTIVITY_BLOCK)
+				mainOriginal[i][j] = BLOCK_POSSIBLE;
+
+		
 		}
 	}
+
 }
 
 void makeBlock(BLOCK * blockPointer)
@@ -286,7 +296,7 @@ void makeBlock(BLOCK * blockPointer)
 
 	case 5:			//T									
 
-		for (i = 0; i < BLOCK_SIZE_X; i++)
+		for (i = 0; i < BLOCK_SIZE_X-1; i++)
 			blockPointer->block[2][i] = ACTIVITY_BLOCK;
 		blockPointer->block[3][1] = ACTIVITY_BLOCK;
 
@@ -319,33 +329,177 @@ void reset(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPoin
 
 void dropBlock(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X])
 {
-	blockPointer->yPosition += 1;
+	moveBlock(blockPointer, mainOriginal, mainCopy, DOWN);
+	//blockPointer->yPosition += 1;
 
-	crushBlcok(blockPointer, mainOriginal, mainCopy);
+	crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN);
 }
 
-int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X])
+int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], int directionKey)
 {
-	int i, j, k;
+	int i, j;
+	int count = 0;
+	int testMain1[MAIN_Y][MAIN_X];
+	int testMain2[MAIN_Y][MAIN_X];
 
-	for (k = 0; k < BLOCK_SIZE_X; k++)
+	for (i = 0; i < MAIN_Y; i++)
 	{
-		if (mainOriginal[blockPointer->yPosition + BLOCK_SIZE_Y][blockPointer->xPosition+k] == WALL || mainCopy[blockPointer->yPosition + BLOCK_SIZE_Y][blockPointer->xPosition + k] == BLOCK_FIXED)
+		for (j = 0; j < MAIN_X; j++)
 		{
+			testMain1[i][j] = mainCopy[i][j];
+			testMain2[i][j] = mainCopy[i][j];
+		}
+	}
+
+	for (i = 0; i < BLOCK_SIZE_Y; i++)
+	{
+		for (j = 0; j < BLOCK_SIZE_X; j++)
+		{
+			if (blockPointer->block[i][j] == ACTIVITY_BLOCK)
+			{	  
+				testMain2[i + blockPointer->yPosition][j + blockPointer->xPosition] = blockPointer->block[i][j];
+				testMain1[i + blockPointer->yPosition][j + blockPointer->xPosition] = blockPointer->block[i][j];
+			}
+		}
+	}
+
+	switch (directionKey)
+	{
+	case LEFT:
+
+		blockPointer->xPosition -= 1;
+
+		for (i = 0; i < BLOCK_SIZE_Y; i++)
+		{
+			for (j = 0; j < BLOCK_SIZE_X; j++)
+			{
+				if (blockPointer->block[i][j] == ACTIVITY_BLOCK)
+				{
+					testMain2[i + blockPointer->yPosition][j + blockPointer->xPosition] = blockPointer->block[i][j];
+				}
+
+			}
+		}
+
+		for (i = 0; i < MAIN_Y; i++)
+		{
+			for (j = 0; j < MAIN_X; j++)
+			{
+				if (testMain1[i][j] != testMain2[i][j])
+				{
+					if (testMain1[i][j] == BLOCK_FIXED || testMain1[i][j] == WALL)
+						count = 1;
+				}
+			}
+		}
+		
+		blockPointer->xPosition += 1;
+		
+		if (count == 1 || blockPointer->xPosition == 0)
+			return 1;
+		
+			
+		
+
+		break;
+
+	case RIGHT:
+
+		blockPointer->xPosition += 1;
+
+		for (i = 0; i < BLOCK_SIZE_Y; i++)
+		{
+			for (j = 0; j < BLOCK_SIZE_X; j++)
+			{
+				if (blockPointer->block[i][j] == ACTIVITY_BLOCK)
+				{
+					testMain2[i + blockPointer->yPosition][j + blockPointer->xPosition] = blockPointer->block[i][j];
+				}
+
+			}
+		}
+
+		for (i = 0; i < MAIN_Y; i++)
+		{
+			for (j = 0; j < MAIN_X; j++)
+			{
+				if (testMain1[i][j] != testMain2[i][j])
+				{
+					if (testMain1[i][j] == BLOCK_FIXED || testMain1[i][j] == WALL)
+						count = 1;
+				}
+			}
+		}
+		blockPointer->xPosition -= 1;
+
+		if (count == 1 || blockPointer->xPosition == 11)
+			return 1;
+		
+
+		break;
+
+	case DOWN:
+		blockPointer->yPosition += 1;
+
+		for (i = 0; i < BLOCK_SIZE_Y; i++)
+		{
+			for (j = 0; j < BLOCK_SIZE_X; j++)
+			{
+				if (blockPointer->block[i][j] == ACTIVITY_BLOCK)
+				{
+					testMain2[i + blockPointer->yPosition][j + blockPointer->xPosition] = blockPointer->block[i][j];
+				}
+				
+			}
+		}
+
+		for (i = 0; i < MAIN_Y; i++)
+		{
+			for (j = 0; j < MAIN_X; j++)
+			{
+				if (testMain1[i][j] != testMain2[i][j])
+				{
+					if (testMain1[i][j] == BLOCK_FIXED || testMain1[i][j] == WALL)
+						count = 1;
+				
+				}
+			}
+		}
+		
+		blockPointer->yPosition -= 1;
+
+		if (count == 1)
+		{
+			
 			for (i = 0; i < BLOCK_SIZE_Y; i++)
 			{
 				for (j = 0; j < BLOCK_SIZE_X; j++)
 				{
-					if (blockPointer->block[i][j] == ACTIVITY_BLOCK )
+					if (blockPointer->block[i][j] == ACTIVITY_BLOCK)
 						blockPointer->block[i][j] = BLOCK_FIXED;
 				}
 			}
-
 			makeMap(mainOriginal, mainCopy, blockPointer);
 			makeBlock(blockPointer);
 
+			if (blockPointer->yPosition == 1)
+			{
+
+				Sleep(10000);
+
+				exit(0);
+			}
+
 			return 1;
 		}
+
+		
+
+		break;
+
+		
+	default:
+		break;
 	}
 
 	return 0;
@@ -370,38 +524,86 @@ void inputKey(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 			{
 			case LEFT:
 
-				blockPointer->xPosition -= 1;
-
+				moveBlock(blockPointer, mainOriginal, mainCopy, LEFT);
+				//crushBlcok(blockPointer, mainOriginal, mainCopy, LEFT);
 				break;
 
 			case RIGHT:
 
-				blockPointer->xPosition += 1;
+				moveBlock(blockPointer, mainOriginal, mainCopy, RIGHT);
+				//crushBlcok(blockPointer, mainOriginal, mainCopy, RIGHT);
 				break;
 
 			case DOWN:
 
-				blockPointer->yPosition -= 1;
+				moveBlock(blockPointer, mainOriginal, mainCopy, DOWN);
+				crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN);
+				break;
+
+			case UP:
+
+				break;
+			}
+		}
+		else if(key != KEY_CHECK)
+		{
+			switch (key)
+			{
+
+			case SPACE:
+
+				while (1)
+				{
+					if (crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN) == 1)
+						break;
+
+					moveBlock(blockPointer, mainOriginal, mainCopy, DOWN);
+				}
 
 				break;
 			}
 		}
 	}
-	else
-	{
-		switch (key)
-		{
-
-		case SPACE :
-
-			while (crushBlcok(blockPointer, mainOriginal, mainCopy) == 1) 
-			{
-				dropBlock(blockPointer, mainOriginal, mainCopy);
-			}
-
-			break;
-
-		}
-	}
 	
+	
+}
+
+void moveBlock(BLOCK *blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], int directionKey)
+{
+	int i, j;
+
+	switch (directionKey)
+	{
+	case LEFT:
+
+		if(!crushBlcok(blockPointer, mainOriginal, mainCopy, LEFT))
+			blockPointer->xPosition -= 1;
+
+		break;
+
+	case RIGHT:
+
+		if(!crushBlcok(blockPointer, mainOriginal, mainCopy, RIGHT))
+			blockPointer->xPosition += 1;
+
+		break;
+
+	case DOWN:
+
+		for (i = 0; i < BLOCK_SIZE_Y; i++)
+		{
+			for (j = 0; j < BLOCK_SIZE_X; j++)
+			{
+				if (blockPointer->block[i][j] == ACTIVITY_BLOCK)
+					mainOriginal[i + blockPointer->yPosition][j + blockPointer->xPosition] = BLOCK_POSSIBLE;
+
+			}
+		}
+		blockPointer->yPosition += 1;
+
+		break;
+
+	default:
+		break;
+	}
 }
