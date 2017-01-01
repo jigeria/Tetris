@@ -8,7 +8,7 @@
 
 #define COMMAND_SIZE 256
 #define MAIN_X 12 
-#define MAIN_Y 20
+#define MAIN_Y 23
 #define GAME_SIZE_WIDTH 10
 #define GAME_SIZE_HEIGHT 19 
 #define X 5
@@ -49,18 +49,25 @@ typedef struct
 
 void gotoxy(int x, int y);
 void mainTitle();
-void setMap(int [][MAIN_X], int [][MAIN_X]);
-void makeMap(int[][MAIN_X], int [][MAIN_X], BLOCK * blockPointer);
-void makeBlock(BLOCK *);
-void reset(int[][MAIN_X], int[][MAIN_X], BLOCK * blockPointer);
-void dropBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X]);
-int crushBlcok(BLOCK *, int[][MAIN_X], int[][MAIN_X], int);
-void inputKey(BLOCK *, int[][MAIN_X], int[][MAIN_X]);
-void moveBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X], int);
-
+void setMap(int [][MAIN_X], int [][MAIN_X], GAMEINFORMATION *);
+void makeMap(int[][MAIN_X], int [][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *);
+void makeBlock(BLOCK *, int[][MAIN_X]);
+void reset(int[][MAIN_X], int[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *);
+void dropBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X], GAMEINFORMATION *);
+int crushBlcok(BLOCK *, int[][MAIN_X], int[][MAIN_X], int, GAMEINFORMATION*);
+void inputKey(BLOCK *, int[][MAIN_X], int[][MAIN_X], GAMEINFORMATION *);
+void moveBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X], int, GAMEINFORMATION *);
+void rotaitonBlock(BLOCK *);
+void checkLine(int[][MAIN_X], int [][MAIN_X], BLOCK *, GAMEINFORMATION *);
+void gameOver();
 
 int main()
 {
+	CONSOLE_CURSOR_INFO cursorInfo;
+	cursorInfo.dwSize = 1;
+	cursorInfo.bVisible = FALSE;
+	SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursorInfo);
+
 	int x = 5;
 	int y = 4;
 	int i = 0;
@@ -68,24 +75,25 @@ int main()
 	int mainCopy[MAIN_Y][MAIN_X];
 	BLOCK *blockPointer;
 	blockPointer = (BLOCK*)malloc(sizeof(BLOCK));
+	GAMEINFORMATION *infomationPointer = (GAMEINFORMATION*)malloc(sizeof(GAMEINFORMATION));
 
 	srand(time(NULL));
 
 	mainTitle();
 
-	reset(mainOriginal, mainCopy, blockPointer);
+	reset(mainOriginal, mainCopy, blockPointer, infomationPointer);
 	
 	while (1)
 	{
 		for (i = 0; i < 5; i++)
 		{
-			inputKey(blockPointer, mainOriginal, mainCopy);
-			makeMap(mainOriginal, mainCopy, blockPointer);
+			inputKey(blockPointer, mainOriginal, mainCopy, infomationPointer);
+			makeMap(mainOriginal, mainCopy, blockPointer, infomationPointer);
 			
 			Sleep(150);
 		}
 		
-		dropBlock(blockPointer, mainOriginal, mainCopy);
+		dropBlock(blockPointer, mainOriginal, mainCopy, infomationPointer);
 	}
 	
 	getchar();
@@ -134,9 +142,11 @@ void mainTitle()
 	system("cls");
 }
 
-void setMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X])
+void setMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], GAMEINFORMATION *infoPointer)
 {
 	int i, j;
+	infoPointer->level = 1;
+	infoPointer->score = 0;
 
 	for (i = 0; i < MAIN_Y; i++)
 	{
@@ -158,11 +168,18 @@ void setMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X])
 	{
 		mainOriginal[MAIN_Y - 1][i] = WALL;
 	}
-		
+	
 	system("cls");
+
+	gotoxy(MAIN_X + 10, 8);
+	printf("level : %d", infoPointer->level);
+
+	gotoxy(MAIN_X + 10, 10);
+	printf("score : %d", infoPointer->score);
+
 }
 
-void makeMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPointer)
+void makeMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *infoPointer)
 {
 	int i, j;
 
@@ -221,17 +238,28 @@ void makeMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPo
 
 			if (mainOriginal[i][j] == ACTIVITY_BLOCK)
 				mainOriginal[i][j] = BLOCK_POSSIBLE;
-
-		
 		}
 	}
 
+	checkLine(mainOriginal, mainCopy, blockPointer, infoPointer);
 }
 
-void makeBlock(BLOCK * blockPointer)
+void makeBlock(BLOCK * blockPointer, int mainCopy[][MAIN_X])
 {
 	int i = 0, j = 0;
 	
+	for (i = 0; i < MAIN_X; i++)
+	{
+		if (mainCopy[2][i] == BLOCK_FIXED)
+		{
+			gameOver();
+			Sleep(1000);
+
+			exit(0);
+		}
+			
+	}
+
 	for (i = 0; i < BLOCK_SIZE_Y; i++)
 	{
 		for (j = 0; j < BLOCK_SIZE_X; j++)
@@ -248,19 +276,21 @@ void makeBlock(BLOCK * blockPointer)
 	{
 	case 0:		//J
 		
-		blockPointer->block[1][1] = ACTIVITY_BLOCK;
+		blockPointer->block[0][2] = ACTIVITY_BLOCK;
+		blockPointer->block[1][2] = ACTIVITY_BLOCK;
+		blockPointer->block[2][2] = ACTIVITY_BLOCK;
 		blockPointer->block[2][1] = ACTIVITY_BLOCK;
-		blockPointer->block[3][1] = ACTIVITY_BLOCK;
-		blockPointer->block[3][0] = ACTIVITY_BLOCK;
+
+		blockPointer->xPosition -= 1;
 
 		break;
 
-	case 1:		//L										
+	case 1:		//L			2							
 
+		blockPointer->block[0][1] = ACTIVITY_BLOCK;
 		blockPointer->block[1][1] = ACTIVITY_BLOCK;
 		blockPointer->block[2][1] = ACTIVITY_BLOCK;
-		blockPointer->block[3][1] = ACTIVITY_BLOCK;
-		blockPointer->block[3][2] = ACTIVITY_BLOCK;
+		blockPointer->block[2][2] = ACTIVITY_BLOCK;
 
 		blockPointer->xPosition -= 1;
 
@@ -268,37 +298,39 @@ void makeBlock(BLOCK * blockPointer)
 
 	case 2:		//S										
 		
-		blockPointer->block[1][0] = ACTIVITY_BLOCK;
-		blockPointer->block[2][0] = ACTIVITY_BLOCK;
-		blockPointer->block[2][1] = ACTIVITY_BLOCK;
-		blockPointer->block[3][1] = ACTIVITY_BLOCK;
+		blockPointer->block[0][1] = ACTIVITY_BLOCK;
+		blockPointer->block[1][1] = ACTIVITY_BLOCK;
+		blockPointer->block[1][2] = ACTIVITY_BLOCK;
+		blockPointer->block[2][2] = ACTIVITY_BLOCK;
 		
+		blockPointer->xPosition -= 1;
 		break;
 
 	case 3:			//O									
 
-		blockPointer->block[2][0] = ACTIVITY_BLOCK;
-		blockPointer->block[2][1] = ACTIVITY_BLOCK;
-		blockPointer->block[3][0] = ACTIVITY_BLOCK;
-		blockPointer->block[3][1] = ACTIVITY_BLOCK;
+		blockPointer->block[0][1] = ACTIVITY_BLOCK;
+		blockPointer->block[0][2] = ACTIVITY_BLOCK;
+		blockPointer->block[1][1] = ACTIVITY_BLOCK;
+		blockPointer->block[1][2] = ACTIVITY_BLOCK;
 
 
 		break;
 
 	case 4:				//Z								
 
+		blockPointer->block[0][2] = ACTIVITY_BLOCK;
+		blockPointer->block[1][2] = ACTIVITY_BLOCK;
 		blockPointer->block[1][1] = ACTIVITY_BLOCK;
 		blockPointer->block[2][1] = ACTIVITY_BLOCK;
-		blockPointer->block[2][0] = ACTIVITY_BLOCK;
-		blockPointer->block[3][0] = ACTIVITY_BLOCK;
 
+		blockPointer->xPosition -= 1;
 		break;
 
 	case 5:			//T									
 
 		for (i = 0; i < BLOCK_SIZE_X-1; i++)
-			blockPointer->block[2][i] = ACTIVITY_BLOCK;
-		blockPointer->block[3][1] = ACTIVITY_BLOCK;
+			blockPointer->block[0][i] = ACTIVITY_BLOCK;
+		blockPointer->block[1][1] = ACTIVITY_BLOCK;
 
 		blockPointer->xPosition -= 1;
 
@@ -320,27 +352,29 @@ void makeBlock(BLOCK * blockPointer)
 	
 }
 
-void reset(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPointer)
+void reset(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION * infoPointer)
 {
-	setMap(mainOriginal, mainCopy);
-	makeBlock(blockPointer);
-	makeMap(mainOriginal, mainCopy, blockPointer);
+	setMap(mainOriginal, mainCopy, infoPointer);
+	makeBlock(blockPointer, mainCopy);
+	makeMap(mainOriginal, mainCopy, blockPointer, infoPointer);
 }
 
-void dropBlock(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X])
+void dropBlock(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], GAMEINFORMATION *infoPointer)
 {
-	moveBlock(blockPointer, mainOriginal, mainCopy, DOWN);
+	moveBlock(blockPointer, mainOriginal, mainCopy, DOWN, infoPointer);
 	//blockPointer->yPosition += 1;
 
-	crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN);
+	crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN, infoPointer);
 }
 
-int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], int directionKey)
+int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], int directionKey, GAMEINFORMATION *infoPointer)
 {
 	int i, j;
+	int k = 3;
 	int count = 0;
 	int testMain1[MAIN_Y][MAIN_X];
 	int testMain2[MAIN_Y][MAIN_X];
+	int testBlock[BLOCK_SIZE_Y][BLOCK_SIZE_X];
 
 	for (i = 0; i < MAIN_Y; i++)
 	{
@@ -397,9 +431,6 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 		
 		if (count == 1 || blockPointer->xPosition == 0)
 			return 1;
-		
-			
-		
 
 		break;
 
@@ -435,7 +466,6 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 		if (count == 1 || blockPointer->xPosition == 11)
 			return 1;
 		
-
 		break;
 
 	case DOWN:
@@ -461,7 +491,6 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 				{
 					if (testMain1[i][j] == BLOCK_FIXED || testMain1[i][j] == WALL)
 						count = 1;
-				
 				}
 			}
 		}
@@ -470,7 +499,9 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 
 		if (count == 1)
 		{
-			
+			for (i = 0; i < 5; i++)
+				inputKey(blockPointer, mainOriginal, mainCopy, infoPointer);
+
 			for (i = 0; i < BLOCK_SIZE_Y; i++)
 			{
 				for (j = 0; j < BLOCK_SIZE_X; j++)
@@ -479,24 +510,53 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 						blockPointer->block[i][j] = BLOCK_FIXED;
 				}
 			}
-			makeMap(mainOriginal, mainCopy, blockPointer);
-			makeBlock(blockPointer);
-
-			if (blockPointer->yPosition == 1)
-			{
-
-				Sleep(10000);
-
-				exit(0);
-			}
+			makeMap(mainOriginal, mainCopy, blockPointer, infoPointer);
+			makeBlock(blockPointer, mainCopy);
 
 			return 1;
 		}
 
-		
-
 		break;
 
+	case UP:
+
+		for (i = 0; i < BLOCK_SIZE_Y; i++)
+		{
+			for (j = 0; j < BLOCK_SIZE_X; j++)
+			{
+				testBlock[j][k] = blockPointer->block[i][j];
+			}
+			k--;
+		}
+
+		for (i = 0; i < BLOCK_SIZE_Y; i++)
+		{
+			for (j = 0; j < BLOCK_SIZE_X; j++)
+			{
+				if (testBlock[i][j] == ACTIVITY_BLOCK)
+				{
+					testMain2[i + blockPointer->yPosition][j + blockPointer->xPosition] = testBlock[i][j];
+				}
+
+			}
+		}
+
+		for (i = 0; i < MAIN_Y; i++)
+		{
+			for (j = 0; j < MAIN_X; j++)
+			{
+				if (testMain1[i][j] != testMain2[i][j])
+				{
+					if (testMain1[i][j] == WALL || testMain1[i][j] == BLOCK_FIXED)
+						count = 1;
+				}
+			}
+		}
+		
+		if (count == 1)
+			return 1;
+
+		break;
 		
 	default:
 		break;
@@ -505,7 +565,7 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 	return 0;
 }
 
-void inputKey(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X])
+void inputKey(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], GAMEINFORMATION *infoPointer)
 {
 	int key = 0;
 	
@@ -524,28 +584,29 @@ void inputKey(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 			{
 			case LEFT:
 
-				moveBlock(blockPointer, mainOriginal, mainCopy, LEFT);
-				//crushBlcok(blockPointer, mainOriginal, mainCopy, LEFT);
+				moveBlock(blockPointer, mainOriginal, mainCopy, LEFT, infoPointer);
 				break;
 
 			case RIGHT:
 
-				moveBlock(blockPointer, mainOriginal, mainCopy, RIGHT);
-				//crushBlcok(blockPointer, mainOriginal, mainCopy, RIGHT);
-				break;
+				moveBlock(blockPointer, mainOriginal, mainCopy, RIGHT, infoPointer);
+				break; 
 
 			case DOWN:
 
-				moveBlock(blockPointer, mainOriginal, mainCopy, DOWN);
-				crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN);
+				moveBlock(blockPointer, mainOriginal, mainCopy, DOWN, infoPointer);
+				crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN, infoPointer);
 				break;
 
 			case UP:
 
+				if (!crushBlcok(blockPointer, mainOriginal, mainCopy, UP, infoPointer))
+					rotaitonBlock(blockPointer);
+
 				break;
 			}
 		}
-		else if(key != KEY_CHECK)
+		else if (key != KEY_CHECK)
 		{
 			switch (key)
 			{
@@ -554,21 +615,19 @@ void inputKey(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 
 				while (1)
 				{
-					if (crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN) == 1)
+					if (crushBlcok(blockPointer, mainOriginal, mainCopy, DOWN, infoPointer) == 1)
 						break;
 
-					moveBlock(blockPointer, mainOriginal, mainCopy, DOWN);
+					moveBlock(blockPointer, mainOriginal, mainCopy, DOWN, infoPointer);
 				}
 
 				break;
 			}
 		}
 	}
-	
-	
 }
 
-void moveBlock(BLOCK *blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], int directionKey)
+void moveBlock(BLOCK *blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], int directionKey, GAMEINFORMATION *infoPointer)
 {
 	int i, j;
 
@@ -576,14 +635,14 @@ void moveBlock(BLOCK *blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 	{
 	case LEFT:
 
-		if(!crushBlcok(blockPointer, mainOriginal, mainCopy, LEFT))
+		if(!crushBlcok(blockPointer, mainOriginal, mainCopy, LEFT, infoPointer))
 			blockPointer->xPosition -= 1;
 
 		break;
 
 	case RIGHT:
 
-		if(!crushBlcok(blockPointer, mainOriginal, mainCopy, RIGHT))
+		if(!crushBlcok(blockPointer, mainOriginal, mainCopy, RIGHT, infoPointer))
 			blockPointer->xPosition += 1;
 
 		break;
@@ -596,7 +655,6 @@ void moveBlock(BLOCK *blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 			{
 				if (blockPointer->block[i][j] == ACTIVITY_BLOCK)
 					mainOriginal[i + blockPointer->yPosition][j + blockPointer->xPosition] = BLOCK_POSSIBLE;
-
 			}
 		}
 		blockPointer->yPosition += 1;
@@ -607,3 +665,110 @@ void moveBlock(BLOCK *blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 		break;
 	}
 }
+
+void rotaitonBlock(BLOCK *blockPointer)
+{
+	int i, j;
+	int k = 3;
+	int copyArr[BLOCK_SIZE_Y][BLOCK_SIZE_X];
+
+	for (i = 0; i < BLOCK_SIZE_Y; i++)
+	{
+		for (j = 0; j < BLOCK_SIZE_X; j++)
+		{
+			copyArr[j][k] = blockPointer->block[i][j];
+		}
+		k--;
+	}
+
+	for (i = 0; i < BLOCK_SIZE_Y; i++)
+	{
+		for (j = 0; j < BLOCK_SIZE_X; j++)
+		{
+			blockPointer->block[i][j] = copyArr[i][j];
+		}
+	}
+
+
+}
+
+void checkLine(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK *blockPointer, GAMEINFORMATION *infoPointer)
+{
+	int count = 0;
+	int i, j;
+	int checkPosition = 0;
+
+	for (i = MAIN_Y; i > 3; i--)
+	{
+		count = 0;
+
+		for (j = 0; j < MAIN_X; j++)
+		{
+			if (mainCopy[i][j] == BLOCK_FIXED)
+				count++;
+		}
+		if (count == MAIN_X - 2)
+			break;
+	}
+
+	checkPosition = i;
+
+	if (count == MAIN_X - 2)
+	{
+		for (i = checkPosition -1; i > 3; i--)
+		{
+			for (j = 0; j < MAIN_X; j++)
+			{
+				if (mainCopy[i][j] != WALL)
+				{
+					mainOriginal[i + 1][j] = mainOriginal[i][j];
+				}
+			}
+		}
+
+		makeMap(mainOriginal, mainCopy, blockPointer, infoPointer);
+		
+		infoPointer->score += 100;
+		gotoxy(MAIN_X + 10, 10);
+		printf("score : %d", infoPointer->score);
+	}
+
+}
+
+void gameOver()
+{
+	int i, j;
+
+	gotoxy(MAIN_X, MAIN_Y / 2);
+	printf("¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á");
+	Sleep(100);
+
+	for (i = 0; i < 6; i++)
+	{
+		gotoxy(MAIN_X, (MAIN_Y / 2) + i);
+		printf("¡á");
+
+		gotoxy(MAIN_X + (MAIN_Y/2) + 6, (MAIN_Y / 2) + i);
+		printf("¡á");
+
+		Sleep(10);
+	}
+
+	gotoxy(MAIN_X + 2, MAIN_Y / 2 + 2);
+	printf("+------------------------+");
+	//Sleep(100);
+
+	gotoxy(MAIN_Y + -8, MAIN_Y / 2 + 3);
+	printf("G  A  M  E  O  V  E  R !!");
+	Sleep(100);
+
+	gotoxy(MAIN_X + 2, MAIN_Y / 2 + 4);
+	printf("+------------------------+");
+	//Sleep(100);
+
+	Sleep(100);
+	gotoxy(MAIN_X, (MAIN_Y / 2) + 6);
+	printf("¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á¡á");
+
+}
+
