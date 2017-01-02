@@ -28,6 +28,8 @@
 #define DOWN 80
 #define UP 72 // rotaion 회전
 #define SPACE 32 // hard drop
+#define PAUSE 112
+#define QUIT 27
 #define KEY_CHECK 224
 
 typedef struct
@@ -41,17 +43,22 @@ typedef struct
 
 typedef struct
 {
+	char id[20];
 	int score;
 	int speed;
 	int level;
+	int highScore;
+	int dataCount;
 
 }GAMEINFORMATION;
 
+void gameStart(int[][MAIN_X], int[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *);
+void inputId(GAMEINFORMATION *);
 void gotoxy(int x, int y);
 void mainTitle();
 void setMap(int [][MAIN_X], int [][MAIN_X], GAMEINFORMATION *);
 void makeMap(int[][MAIN_X], int [][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *);
-void makeBlock(BLOCK *, int[][MAIN_X]);
+void makeBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X], GAMEINFORMATION *);
 void reset(int[][MAIN_X], int[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *);
 void dropBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X], GAMEINFORMATION *);
 int crushBlcok(BLOCK *, int[][MAIN_X], int[][MAIN_X], int, GAMEINFORMATION*);
@@ -59,7 +66,8 @@ void inputKey(BLOCK *, int[][MAIN_X], int[][MAIN_X], GAMEINFORMATION *);
 void moveBlock(BLOCK *, int[][MAIN_X], int[][MAIN_X], int, GAMEINFORMATION *);
 void rotaitonBlock(BLOCK *);
 void checkLine(int[][MAIN_X], int [][MAIN_X], BLOCK *, GAMEINFORMATION *);
-void gameOver();
+void gameOver(int[][MAIN_X], int[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *);
+void saveScore(GAMEINFORMATION *);
 
 int main()
 {
@@ -80,23 +88,9 @@ int main()
 	srand(time(NULL));
 
 	mainTitle();
-
-	reset(mainOriginal, mainCopy, blockPointer, infomationPointer);
+	inputId(infomationPointer);
 	
-	while (1)
-	{
-		for (i = 0; i < 5; i++)
-		{
-			inputKey(blockPointer, mainOriginal, mainCopy, infomationPointer);
-			makeMap(mainOriginal, mainCopy, blockPointer, infomationPointer);
-			
-			Sleep(150);
-		}
-		
-		dropBlock(blockPointer, mainOriginal, mainCopy, infomationPointer);
-	}
-	
-	getchar();
+	gameStart(mainOriginal, mainCopy, blockPointer, infomationPointer);
 
 	return 0;
 }
@@ -107,6 +101,119 @@ void gotoxy(int x, int y)
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), CursorPosition);
 }
 
+void saveScore(GAMEINFORMATION * infoPointer)
+{
+	FILE * idFPointer;
+	FILE * copyPointer;
+
+	char ID[20] = {'0'};
+	int score = 0;
+
+	idFPointer = fopen("Data.txt", "r");
+	copyPointer = fopen("copyData.txt", "w");
+
+	while (1)
+	{
+		fscanf(idFPointer, "%s %d", ID, &score);
+		
+		if (feof(idFPointer))
+			break;
+		if(strcmp(infoPointer->id, ID) != 0)
+			fprintf(copyPointer, "%s %d \n", ID, score);
+	}
+
+	fprintf(copyPointer, "%s %d \n", infoPointer->id, infoPointer->highScore);
+
+	fclose(idFPointer);
+	fclose(copyPointer);
+
+	idFPointer = fopen("Data.txt", "w");
+	copyPointer = fopen("copyData.txt", "r");
+
+	while (1)
+	{
+		fscanf(copyPointer, "%s %d", ID, &score);
+
+		if (feof(copyPointer))
+			break;
+
+		fprintf(idFPointer, "%s %d \n", ID, score);
+	}
+
+	fclose(idFPointer);
+	fclose(copyPointer);
+}
+
+void gameStart(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *infoPointer)
+{
+	reset(mainOriginal, mainCopy, blockPointer, infoPointer);
+
+	while (1)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			inputKey(blockPointer, mainOriginal, mainCopy, infoPointer);
+			makeMap(mainOriginal, mainCopy, blockPointer, infoPointer);
+
+			Sleep(150);
+		}
+
+		dropBlock(blockPointer, mainOriginal, mainCopy, infoPointer);
+	}
+
+}
+
+void inputId(GAMEINFORMATION * infoPointer)
+{
+	char id[20] = {'0'};
+	int score = 0;
+
+	gotoxy(MAIN_X, MAIN_Y / 2);
+	printf("ID : ");
+	fgets(id, 20, stdin);
+
+	for (int i = 0; i < sizeof(id); i++)
+	{
+		if (id[i] == '\n')
+		{
+			id[i] = '\0';
+			break;
+		}
+			
+	}
+
+	FILE *idFPointer;
+	idFPointer = fopen("Data.txt", "r");
+
+	infoPointer->highScore = 0;
+	infoPointer->dataCount = 0;
+
+	while (1)
+	{
+		fscanf(idFPointer, "%s", infoPointer->id);
+		fscanf(idFPointer, "%d", &score);
+
+		if (feof(idFPointer))
+		{
+			fclose(idFPointer);
+			idFPointer = fopen("Data.txt", "a");
+			fprintf(idFPointer, "%s %d \n", id, score);
+			
+			strcpy(infoPointer->id, id);
+			break;
+		}
+			
+		if (strcmp(id, infoPointer->id) == 0)
+		{
+			infoPointer->highScore = score;
+			strcpy(infoPointer->id, id);
+			infoPointer->dataCount = 1;
+		}
+			
+	}
+	
+	fclose(idFPointer);
+}
 void mainTitle()
 {
 	int x = 5;
@@ -147,6 +254,7 @@ void setMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], GAMEINFORMATION 
 	int i, j;
 	infoPointer->level = 1;
 	infoPointer->score = 0;
+	infoPointer->speed = 1;
 
 	for (i = 0; i < MAIN_Y; i++)
 	{
@@ -170,6 +278,9 @@ void setMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], GAMEINFORMATION 
 	}
 	
 	system("cls");
+
+	gotoxy(MAIN_X + 10, 6);
+	printf("HighScore : %d", infoPointer->highScore);
 
 	gotoxy(MAIN_X + 10, 8);
 	printf("level : %d", infoPointer->level);
@@ -244,7 +355,7 @@ void makeMap(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPo
 	checkLine(mainOriginal, mainCopy, blockPointer, infoPointer);
 }
 
-void makeBlock(BLOCK * blockPointer, int mainCopy[][MAIN_X])
+void makeBlock(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], GAMEINFORMATION *infoPointer)
 {
 	int i = 0, j = 0;
 	
@@ -252,10 +363,7 @@ void makeBlock(BLOCK * blockPointer, int mainCopy[][MAIN_X])
 	{
 		if (mainCopy[2][i] == BLOCK_FIXED)
 		{
-			gameOver();
-			Sleep(1000);
-
-			exit(0);
+			gameOver(mainOriginal, mainCopy, blockPointer, infoPointer);
 		}
 			
 	}
@@ -308,11 +416,12 @@ void makeBlock(BLOCK * blockPointer, int mainCopy[][MAIN_X])
 
 	case 3:			//O									
 
-		blockPointer->block[0][1] = ACTIVITY_BLOCK;
-		blockPointer->block[0][2] = ACTIVITY_BLOCK;
 		blockPointer->block[1][1] = ACTIVITY_BLOCK;
 		blockPointer->block[1][2] = ACTIVITY_BLOCK;
+		blockPointer->block[2][1] = ACTIVITY_BLOCK;
+		blockPointer->block[2][2] = ACTIVITY_BLOCK;
 
+		blockPointer->xPosition -= 1;
 
 		break;
 
@@ -355,7 +464,7 @@ void makeBlock(BLOCK * blockPointer, int mainCopy[][MAIN_X])
 void reset(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION * infoPointer)
 {
 	setMap(mainOriginal, mainCopy, infoPointer);
-	makeBlock(blockPointer, mainCopy);
+	makeBlock(blockPointer, mainOriginal, mainCopy, infoPointer);
 	makeMap(mainOriginal, mainCopy, blockPointer, infoPointer);
 }
 
@@ -511,7 +620,7 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 				}
 			}
 			makeMap(mainOriginal, mainCopy, blockPointer, infoPointer);
-			makeBlock(blockPointer, mainCopy);
+			makeBlock(blockPointer, mainOriginal ,mainCopy, infoPointer);
 
 			return 1;
 		}
@@ -568,7 +677,7 @@ int crushBlcok(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][
 void inputKey(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], GAMEINFORMATION *infoPointer)
 {
 	int key = 0;
-	
+
 	if (_kbhit())
 	{
 		key = _getch();
@@ -620,7 +729,35 @@ void inputKey(BLOCK * blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 
 					moveBlock(blockPointer, mainOriginal, mainCopy, DOWN, infoPointer);
 				}
+				break;
 
+			case PAUSE:
+				
+				do {
+					key = _getch();
+
+				} while (key == KEY_CHECK);
+
+				while (1)
+				{
+					if (_kbhit())
+					{
+						key = _getch();
+						if (key != KEY_CHECK)
+							if (key == PAUSE)
+								break;
+					}
+						break;
+
+					Sleep(1);
+				}
+				break;
+
+			case QUIT:
+				
+					saveScore(infoPointer);
+
+				exit(0);
 				break;
 			}
 		}
@@ -657,7 +794,7 @@ void moveBlock(BLOCK *blockPointer, int mainOriginal[][MAIN_X], int mainCopy[][M
 					mainOriginal[i + blockPointer->yPosition][j + blockPointer->xPosition] = BLOCK_POSSIBLE;
 			}
 		}
-		blockPointer->yPosition += 1;
+		blockPointer->yPosition += infoPointer->speed;
 
 		break;
 
@@ -688,8 +825,6 @@ void rotaitonBlock(BLOCK *blockPointer)
 			blockPointer->block[i][j] = copyArr[i][j];
 		}
 	}
-
-
 }
 
 void checkLine(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK *blockPointer, GAMEINFORMATION *infoPointer)
@@ -697,6 +832,7 @@ void checkLine(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK *blockP
 	int count = 0;
 	int i, j;
 	int checkPosition = 0;
+	int testScore = 0;
 
 	for (i = MAIN_Y; i > 3; i--)
 	{
@@ -728,16 +864,39 @@ void checkLine(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK *blockP
 
 		makeMap(mainOriginal, mainCopy, blockPointer, infoPointer);
 		
-		infoPointer->score += 100;
-		gotoxy(MAIN_X + 10, 10);
-		printf("score : %d", infoPointer->score);
+		infoPointer->score += 50;
+		if(infoPointer->highScore < infoPointer->score)
+			infoPointer->highScore = infoPointer->score;
+
+		testScore = infoPointer->score;
 	}
+
+	if (testScore > 500)
+	{
+		infoPointer->level++;
+		infoPointer->speed++;
+		testScore = 0;
+	}
+	
+	if (!infoPointer->dataCount)
+	{
+		gotoxy(MAIN_X + 10, 6);
+		printf("HighScore : %d", infoPointer->highScore);
+	}
+	
+	gotoxy(MAIN_X + 10, 8);
+	printf("level : %d", infoPointer->level);
+	
+	gotoxy(MAIN_X + 10, 10);
+	printf("score : %d", infoPointer->score);
+
+	
 
 }
 
-void gameOver()
+void gameOver(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockPointer, GAMEINFORMATION *infoPointer)
 {
-	int i, j;
+	int i;
 
 	gotoxy(MAIN_X, MAIN_Y / 2);
 	printf("■■■■■■■■■■■■■■■■■■");
@@ -770,5 +929,25 @@ void gameOver()
 	gotoxy(MAIN_X, (MAIN_Y / 2) + 6);
 	printf("■■■■■■■■■■■■■■■■■■");
 
+	saveScore(infoPointer);
+
+	gotoxy(MAIN_X, MAIN_Y / 2 + 7);
+	printf("\n종료하시겠습니까? Y/N ");
+
+	switch (getchar())
+	{
+	case 'Y':
+		exit(0);
+
+		break;
+
+	case'N':
+
+		gameStart(mainOriginal, mainCopy, blockPointer, infoPointer);
+		break;
+	default:
+
+		break;
+	}
 }
 
