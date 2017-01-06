@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
-#include <conio.h>
+//#include <conio.h>
 #include <time.h>
 
 #define COMMAND_SIZE 256
@@ -89,7 +89,7 @@ int main()
 
 	mainTitle();
 	inputId(infomationPointer);
-	
+
 	gameStart(mainOriginal, mainCopy, blockPointer, infomationPointer);
 
 	return 0;
@@ -867,15 +867,23 @@ void checkLine(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK *blockP
 		infoPointer->score += 50;
 		if(infoPointer->highScore < infoPointer->score)
 			infoPointer->highScore = infoPointer->score;
-
-		testScore = infoPointer->score;
 	}
 
-	if (testScore > 500)
+	infoPointer->level = infoPointer->score / 500;
+
+	switch (infoPointer->level)
 	{
-		infoPointer->level++;
-		infoPointer->speed++;
-		testScore = 0;
+	case 1:
+		infoPointer->speed = 1;
+		break;
+
+	case 2:
+		infoPointer->speed = 2;
+		break;
+
+	case 3:
+		infoPointer->speed = 3;
+		break;
 	}
 	
 	if (!infoPointer->dataCount)
@@ -937,17 +945,20 @@ void gameOver(int mainOriginal[][MAIN_X], int mainCopy[][MAIN_X], BLOCK * blockP
 	switch (getchar())
 	{
 	case 'Y':
+	case 'y':
+
 		exit(0);
 
 		break;
 
 	case'N':
+	case 'n':
 
 		gameStart(mainOriginal, mainCopy, blockPointer, infoPointer);
+
 		break;
 	default:
 
 		break;
 	}
 }
-
